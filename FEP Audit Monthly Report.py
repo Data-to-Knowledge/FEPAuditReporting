@@ -77,7 +77,8 @@ Audit = pdsql.mssql.rd_sql(
                    col_names = AuditCol,
                    where_op = 'AND',
                    where_in = AlertFilter,
-                   date_col = 'AuditDate',
+                   date_col = 'AuditDate')
+                   ,
                    from_date = '2018-07-01'
                    )
 
@@ -119,6 +120,28 @@ AuditGrade = AuditFilter[['Zone','Grade']]
 AuditFarm = AuditFilter[['PrimaryFarmType','Grade']]
 
 
+
+ZoneGrades = Audit.groupby(['Audit Submission Year','Audit Submission Month','Zone', 'Grade'])['Grade'].aggregate('count').unstack()
+ZoneGrades.fillna(0, inplace= True)
+ZoneGrades[list("ABCD")] = ZoneGrades[list("ABCD")].astype(int)
+print(ZoneGrades)
+
+
+FarmTypeGrades = Audit.groupby(['Audit Submission Year','Audit Submission Month','PrimaryFarmType', 'Grade'])['Grade'].aggregate('count').unstack()
+FarmTypeGrades.fillna(0, inplace= True)
+FarmTypeGrades[list("ABCD")] = FarmTypeGrades[list("ABCD")].astype(int)
+print(FarmTypeGrades)
+
+# Export results
+FarmTypeGrades.to_csv('FarmType.csv')
+ZoneGrades.to_csv('Zones.csv')
+
+# Audits on CRC without zones
+ZoneCleansing = Audit[['ConsentNumber','AuditDate', 'Zone']][Audit['Zone'].isin(['Investigation & Incident Response','RMO Administration'])]
+ZoneCleansing.to_csv('ZoneCleansing.csv')
+
+
+#Other way
 # Create Pivot
 #x = Audit.pivot_table(Audit,
 #                  index=['Zone','Audit Submission Month'],
@@ -145,49 +168,3 @@ AuditFarm = AuditFilter[['PrimaryFarmType','Grade']]
 #                  aggfunc=[len],
 #                  fill_value=0
 #                  )
-
-ZoneGrades = Audit.groupby(['Audit Submission Month','Zone', 'Grade'])['Grade'].aggregate('count').unstack()
-ZoneGrades.fillna(0, inplace= True)
-ZoneGrades[list("ABCD")] = ZoneGrades[list("ABCD")].astype(int)
-print(ZoneGrades)
-
-
-FarmTypeGrades = Audit.groupby(['PrimaryFarmType','Audit Submission Month', 'Grade'])['Grade'].aggregate('count').unstack()
-FarmTypeGrades.fillna(0, inplace= True)
-FarmTypeGrades[list("ABCD")] = FarmTypeGrades[list("ABCD")].astype(int)
-print(FarmTypeGrades)
-x= FarmTypeGrades.Index(['April'])
-x = FarmTypeGrades.reset_index()
-x.reset_index(level='Audit Submission Month')
-
-
-# https://www.shanelynn.ie/summarising-aggregation-and-grouping-data-in-python-pandas/
-x.to_csv('test.csv')
-
-Audit.groupby(['Zone'])['Grade'].count()
-
-## Create aggragate info
-#WUA_Inspections_count = pd.DataFrame(
-#        WUA_Inspections.groupby(['OfficerAssigned'])['InspectionID'].count())
-##### Missing the (nospecific officer)
-#
-#WUA_Inspections_count.columns = ['Inspection Count']
-
-
-
-#
-#
-## Print email
-#print('Hi Carly,\n\nBelow are the WUA inspections still in process as of ',
-#      datetime.strftime(datetime.now() - timedelta(days =1), '%d-%m-%Y'),
-#      '\n\nThere are',len(WUAInspections.index),'inspections this week.',
-#      '\n\n\n',WUAInspectionsCount,
-#      '\n\n\nWater Use - Alert inspections still in process\n\n',
-#      WUAInspections.to_string(index=False),
-#      '\n\n* Note: This report was created at ',
-#      RunDate.strftime("%H:%M %Y-%m-%d"), ' using ', ReportName,
-#      '\n\nCheers,\nKatie\n'
-#      )
-#
-#
-#
